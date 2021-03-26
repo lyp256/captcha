@@ -1,23 +1,31 @@
 gen:
 	@echo generate...
-	@go generate ./...
+	@go list ./... |grep -v vendor |xargs go generate
 
 vet:
 	@echo 静态语法检查...
-	@go vet ./...
+	@go list ./... |grep -v vendor |xargs go vet
 
 fmt:
 	@echo 代码格式化...
-	@go fmt ./...
+	@go list ./... |grep -v vendor |xargs go fmt
 
 lint:
 	@echo lint...
-	@golint ./...
+	@go list ./... |grep -v vendor |xargs golint
 
 tidy:
 	@echo 依赖检查...
 	@go mod tidy
 
-pretty: tidy fmt lint vet
+vendor:
+	@echo vendor
+	@go mod vendor
 
-.PHONY: tidy fmt lint vet
+test:
+	@echo 单元测试...
+	@go list ./... |grep -v vendor |xargs go test --cover -v
+
+pretty: tidy fmt lint vet vendor
+
+.PHONY: tidy fmt lint vet test vendor pretty
