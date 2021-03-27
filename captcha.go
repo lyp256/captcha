@@ -23,34 +23,43 @@ func NewCaptcha(p Provider, c cache.CURD) *Captcha {
 	}
 }
 
-// Rand 返回一个随机旋转的图片验证码
-func (i *Captcha) Rand(key string) (image.Image, float64, error) {
+// Generate 生成一个验证请求
+func (i *Captcha) Generate(key string) error {
 	rad := randRadian()
-	img, err := i.Draw(key, rad)
+	imageName, err := i.p.Random()
 	if err != nil {
-		return nil, 0, err
+		return err
 	}
-	return img, rad, nil
+	return i.c.Set(key, imageName, rad)
 }
 
-// Draw 返回一个指定旋转角度的验证码
-func (i *Captcha) Draw(key string, rad float64) (image.Image, error) {
-	img, err := i.p.Get()
+// DrawCaptcha 生成一个验证码图片
+func (i *Captcha) DrawCaptcha(key string) (image.Image, error) {
+	imageName, rad, err := i.c.Get(key)
 	if err != nil {
 		return nil, err
 	}
-	err = i.c.Set(key, rad)
+	img, err := i.Draw(imageName, rad)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+// Draw 根据 imageKey 绘制一个验证码
+func (i *Captcha) Draw(imageKey string, rad float64) (image.Image, error) {
+	img, err := i.p.Get(imageKey)
 	if err != nil {
 		return nil, err
 	}
 	// 逆时针旋转
-	geom.CircleAndRotate(img, rad*-1)
+	img = geom.CircleAndRotate(img, rad)
 	return img, nil
 }
 
 // Compare 比较角度
-func (i *Captcha) Compare(key string, rad float64) (threshold float64, err error) {
-	src, err := i.c.Get(key)
+func (i *Captcha) Compare(key string, rad float64) (diff float64, err error) {
+	_, src, err := i.c.Get(key)
 	if err != nil {
 		return -1, err
 	}

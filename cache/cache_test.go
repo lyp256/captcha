@@ -11,49 +11,50 @@ import (
 func TestMapCURD(t *testing.T) {
 	c := NewCURD(time.Millisecond * 10)
 
-	err := c.Set("a", 1)
+	err := c.Set("keyA", "imgA", 1)
 	require.NoError(t, err)
-	err = c.Set("b", 1)
-	require.NoError(t, err)
-
-	v, err := c.Get("a")
-	require.NoError(t, err)
-	require.Equal(t, 1., v)
-
-	err = c.Set("a", 2)
+	err = c.Set("keyB", "imgA", 1)
 	require.NoError(t, err)
 
-	v, err = c.Get("a")
+	img, rad, err := c.Get("keyA")
 	require.NoError(t, err)
-	require.Equal(t, 2., v)
+	require.Equal(t, 1., rad)
+	require.Equal(t, "imgA", img)
+
+	err = c.Set("keyA", "imgA", 2)
+	require.NoError(t, err)
+
+	img, rad, err = c.Get("keyA")
+	require.NoError(t, err)
+	require.Equal(t, 2., rad)
 
 	time.Sleep(time.Millisecond * 11)
 
-	_, err = c.Get("a")
+	_, _, err = c.Get("keyA")
 	require.Equal(t, ErrNotExist, err)
 
-	_, err = c.Delete("b")
+	_, _, err = c.Delete("imgB")
 	require.Equal(t, ErrNotExist, err)
 
-	v, err = c.Get("b")
+	img, rad, err = c.Get("keyB")
 	require.Equal(t, ErrNotExist, err)
 
-	err = c.Set("a", 2)
+	err = c.Set("keyA", "imgA", 2)
 	require.NoError(t, err)
 
-	v, err = c.Delete("a")
+	img, rad, err = c.Delete("keyA")
 	require.NoError(t, err)
-	require.Equal(t, 2., v)
+	require.Equal(t, 2., rad)
 
-	_, err = c.Delete("a")
+	_, _, err = c.Delete("keyA")
 	require.Equal(t, ErrNotExist, err)
 
 }
 
 func TestMapCacheClean(t *testing.T) {
 	c := NewCURD(time.Millisecond * 2).(*mapCache)
-	_ = c.Set("a", 1)
+	_ = c.Set("keyA", "imgA", 1)
 	time.Sleep(time.Millisecond * 3)
-	_ = c.Set("b", 1)
+	_ = c.Set("keyA", "imgB", 1)
 	assert.Len(t, c.data, 1)
 }

@@ -12,7 +12,8 @@ func TestLoadDirImage(t *testing.T) {
 	require.NoError(t, err)
 	p, err := LoadDirImage(dir)
 	require.NoError(t, err)
-	img, err := p.Get()
+	imgName, err := p.Random()
 	require.NoError(t, err)
+	img, err := p.Get(imgName)
 	img.Bounds()
 }

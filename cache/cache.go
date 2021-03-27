@@ -11,13 +11,14 @@ var ErrNotExist = errors.New("not exist")
 
 // CURD cache 的基本操作定义
 type CURD interface {
-	Set(key string, rad float64) error
-	Get(Key string) (rad float64, err error)
-	Delete(Key string) (rad float64, err error)
+	Set(key, image string, rad float64) error
+	Get(Key string) (image string, rad float64, err error)
+	Delete(Key string) (image string, rad float64, err error)
 }
 
 type item struct {
-	val      float64
+	rad      float64
+	image    string
 	createAt int64
 }
 
@@ -37,12 +38,13 @@ func NewCURD(TTL time.Duration) CURD {
 	}
 }
 
-func (m *mapCache) Set(key string, rad float64) error {
+func (m *mapCache) Set(key string, image string, rad float64) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	unixNano := time.Now().UnixNano()
 	m.data[key] = item{
-		val:      rad,
+		rad:      rad,
+		image:    image,
 		createAt: unixNano,
 	}
 	if unixNano-m.lastClean > (m.ttl / 10) {
@@ -66,31 +68,31 @@ func (m *mapCache) clean(n int) {
 	}
 }
 
-func (m *mapCache) Get(Key string) (rad float64, err error) {
+func (m *mapCache) Get(Key string) (image string, rad float64, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	v, ok := m.data[Key]
 	if !ok {
-		return 0, ErrNotExist
+		return "", 0, ErrNotExist
 	}
 	if m.ttl > 0 && time.Now().UnixNano()-v.createAt > m.ttl {
 		delete(m.data, Key)
-		return 0, ErrNotExist
+		return "", 0, ErrNotExist
 	}
-	return v.val, nil
+	return v.image, v.rad, nil
 }
 
-func (m *mapCache) Delete(Key string) (rad float64, err error) {
+func (m *mapCache) Delete(Key string) (image string, rad float64, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	v, ok := m.data[Key]
 	if !ok {
-		return 0, ErrNotExist
+		return "", 0, ErrNotExist
 	}
 	delete(m.data, Key)
 
 	if m.ttl > 0 && time.Now().UnixNano()-v.createAt > m.ttl {
-		return 0, ErrNotExist
+		return "", 0, ErrNotExist
 	}
-	return v.val, nil
+	return v.image, v.rad, nil
 }

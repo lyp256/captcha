@@ -46,8 +46,9 @@ func CircleAndRotate(img image.Image, rad float64) image.Image {
 	for point.X = rec.Min.X; point.X < rec.Max.X; point.X++ {
 		for point.Y = rec.Min.Y; point.Y < rec.Max.Y; point.Y++ {
 			if InCircle(point, center, R) {
-				rPoint := RotatePoint(point, center, rad)
-				dst.Set(rPoint.X, rPoint.Y, img.At(point.X, point.Y))
+				// 使用反向映射 解决噪点问题
+				rPoint := RotatePoint(point, center, rad*-1)
+				dst.Set(point.X, point.Y, img.At(rPoint.X, rPoint.Y))
 			}
 		}
 	}

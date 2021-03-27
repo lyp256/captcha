@@ -11,12 +11,8 @@ import (
 
 // Provider 图片提供接口
 type Provider interface {
-	Get() (image.Image, error)
-}
-
-type fsProvider struct {
-	dir   string
-	items []fs.DirEntry
+	Get(key string) (image.Image, error)
+	Random() (string, error)
 }
 
 // LoadDirImage 加载目录中的图片作为 Provider
@@ -42,14 +38,26 @@ func LoadDirImage(dirPath string) (Provider, error) {
 	return &p, err
 }
 
-func (f *fsProvider) Get() (image.Image, error) {
-	index := rand.Intn(len(f.items))
-	item := f.items[index]
-	file, err := os.Open(path.Join(f.dir, item.Name()))
+type fsProvider struct {
+	dir   string
+	items []fs.DirEntry
+}
+
+// Get 获取一个已知图片
+func (f *fsProvider) Get(fileName string) (image.Image, error) {
+	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 	img, _, err := image.Decode(file)
 	return img, err
+}
+
+// Random 随机获取一个图片
+func (f *fsProvider) Random() (string, error) {
+	index := rand.Intn(len(f.items))
+	item := f.items[index]
+	fileName := path.Join(f.dir, item.Name())
+	return fileName, nil
 }
