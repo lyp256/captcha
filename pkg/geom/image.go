@@ -30,7 +30,7 @@ func Circle(img image.Image) image.Image {
 		return SubSquare(img)
 	}
 	// 不能修改
-	dst := image.NewRGBA(rec)
+	dst := image.NewNRGBA(rec)
 	copyCircle(img, dst, rec, center, R)
 	return SubSquare(img)
 }
@@ -41,7 +41,7 @@ func CircleAndRotate(img image.Image, rad float64) image.Image {
 	rec := MaxSquareRectangle(img.Bounds())
 	center := CenterPoint(rec)
 	R := rec.Dx() / 2
-	dst := image.NewRGBA(rec)
+	dst := image.NewNRGBA(rec)
 	var point image.Point
 	for point.X = rec.Min.X; point.X < rec.Max.X; point.X++ {
 		for point.Y = rec.Min.Y; point.Y < rec.Max.Y; point.Y++ {
@@ -78,7 +78,7 @@ func copyCircle(src imageAt, dst imageSet, rec image.Rectangle, center image.Poi
 }
 
 func commonSubImage(img image.Image, rec image.Rectangle) image.Image {
-	subImg := image.NewRGBA(rec)
+	subImg := image.NewNRGBA(rec)
 	var point image.Point
 	for point.X = rec.Min.X; point.X < rec.Max.X; point.X++ {
 		for point.Y = rec.Min.Y; point.Y < rec.Max.Y; point.Y++ {

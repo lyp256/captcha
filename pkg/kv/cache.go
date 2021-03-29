@@ -1,6 +1,7 @@
-package cache
+package kv
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -9,11 +10,11 @@ import (
 // ErrNotExist 不存在
 var ErrNotExist = errors.New("not exist")
 
-// CURD cache 的基本操作定义
+// CURD KV 的基本操作定义
 type CURD interface {
-	Set(key, image string, rad float64) error
-	Get(Key string) (image string, rad float64, err error)
-	Delete(Key string) (image string, rad float64, err error)
+	Set(ctx context.Context, key, image string, rad float64) error
+	Get(ctx context.Context, Key string) (image string, rad float64, err error)
+	Delete(ctx context.Context, Key string) (image string, rad float64, err error)
 }
 
 type item struct {
@@ -30,7 +31,7 @@ type mapCache struct {
 	lastClean int64
 }
 
-// NewCURD 创建一个 基于 map 的 CURD
+// NewCURD 创建一个 基于 map 的 KV CURD
 func NewCURD(TTL time.Duration) CURD {
 	return &mapCache{
 		data: make(map[string]item),
@@ -38,7 +39,7 @@ func NewCURD(TTL time.Duration) CURD {
 	}
 }
 
-func (m *mapCache) Set(key string, image string, rad float64) error {
+func (m *mapCache) Set(_ context.Context, key string, image string, rad float64) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	unixNano := time.Now().UnixNano()
@@ -68,7 +69,7 @@ func (m *mapCache) clean(n int) {
 	}
 }
 
-func (m *mapCache) Get(Key string) (image string, rad float64, err error) {
+func (m *mapCache) Get(_ context.Context, Key string) (image string, rad float64, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	v, ok := m.data[Key]
@@ -82,7 +83,7 @@ func (m *mapCache) Get(Key string) (image string, rad float64, err error) {
 	return v.image, v.rad, nil
 }
 
-func (m *mapCache) Delete(Key string) (image string, rad float64, err error) {
+func (m *mapCache) Delete(_ context.Context, Key string) (image string, rad float64, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	v, ok := m.data[Key]

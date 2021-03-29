@@ -1,45 +1,50 @@
 package captcha
 
 import (
+	"context"
 	"image"
 	"math"
 	"math/rand"
+	"runtime"
 
-	"github.com/lyp256/captcha/cache"
-	"github.com/lyp256/captcha/geom"
+	"github.com/lyp256/captcha/pkg/geom"
+	cache2 "github.com/lyp256/captcha/pkg/kv"
 )
 
 // Captcha 验证码实例
 type Captcha struct {
-	p Provider
-	c cache.CURD
+	img  Provider
+	curd cache2.CURD
+	// 用于控制做图的的并发数，防止大量请求占用内存
+	tokenBucket chan struct{}
 }
 
 // NewCaptcha 创建验证码实例
-func NewCaptcha(p Provider, c cache.CURD) *Captcha {
+func NewCaptcha(p Provider, c cache2.CURD) *Captcha {
 	return &Captcha{
-		p: p,
-		c: c,
+		img:         p,
+		curd:        c,
+		tokenBucket: make(chan struct{}, runtime.NumCPU()),
 	}
 }
 
 // Generate 生成一个验证请求
-func (i *Captcha) Generate(key string) error {
+func (i *Captcha) Generate(ctx context.Context, key string) error {
 	rad := randRadian()
-	imageName, err := i.p.Random()
+	imageName, err := i.img.Random(ctx)
 	if err != nil {
 		return err
 	}
-	return i.c.Set(key, imageName, rad)
+	return i.curd.Set(ctx, key, imageName, rad)
 }
 
 // DrawCaptcha 生成一个验证码图片
-func (i *Captcha) DrawCaptcha(key string) (image.Image, error) {
-	imageName, rad, err := i.c.Get(key)
+func (i *Captcha) DrawCaptcha(ctx context.Context, key string) (image.Image, error) {
+	imageName, rad, err := i.curd.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-	img, err := i.Draw(imageName, rad)
+	img, err := i.Draw(ctx, imageName, rad)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +52,16 @@ func (i *Captcha) DrawCaptcha(key string) (image.Image, error) {
 }
 
 // Draw 根据 imageKey 绘制一个验证码
-func (i *Captcha) Draw(imageKey string, rad float64) (image.Image, error) {
-	img, err := i.p.Get(imageKey)
+func (i *Captcha) Draw(ctx context.Context, imageKey string, rad float64) (image.Image, error) {
+	// 并发控制希望获取一个令牌
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case i.tokenBucket <- struct{}{}:
+	}
+	defer func() { <-i.tokenBucket }()
+
+	img, err := i.img.Get(ctx, imageKey)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +71,8 @@ func (i *Captcha) Draw(imageKey string, rad float64) (image.Image, error) {
 }
 
 // Compare 比较角度
-func (i *Captcha) Compare(key string, rad float64) (diff float64, err error) {
-	_, src, err := i.c.Get(key)
+func (i *Captcha) Compare(ctx context.Context, key string, rad float64) (diff float64, err error) {
+	_, src, err := i.curd.Get(ctx, key)
 	if err != nil {
 		return -1, err
 	}

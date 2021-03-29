@@ -1,6 +1,7 @@
 package captcha
 
 import (
+	"context"
 	"image"
 	"io/fs"
 	"math/rand"
@@ -11,8 +12,8 @@ import (
 
 // Provider 图片提供接口
 type Provider interface {
-	Get(key string) (image.Image, error)
-	Random() (string, error)
+	Get(ctx context.Context, key string) (image.Image, error)
+	Random(ctx context.Context) (string, error)
 }
 
 // LoadDirImage 加载目录中的图片作为 Provider
@@ -44,7 +45,7 @@ type fsProvider struct {
 }
 
 // Get 获取一个已知图片
-func (f *fsProvider) Get(fileName string) (image.Image, error) {
+func (f *fsProvider) Get(ctx context.Context, fileName string) (image.Image, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -55,7 +56,7 @@ func (f *fsProvider) Get(fileName string) (image.Image, error) {
 }
 
 // Random 随机获取一个图片
-func (f *fsProvider) Random() (string, error) {
+func (f *fsProvider) Random(_ context.Context) (string, error) {
 	index := rand.Intn(len(f.items))
 	item := f.items[index]
 	fileName := path.Join(f.dir, item.Name())

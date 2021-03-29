@@ -41,8 +41,7 @@ func CenterPoint(r image.Rectangle) image.Point {
 
 // RotatePoint 计算 src 绕着 ref 旋转 radian 后的位置
 func RotatePoint(src, ref image.Point, radian float64) (dst image.Point) {
-	sin := math.Sin(radian)
-	cos := math.Cos(radian)
+	sin, cos := math.Sincos(radian)
 	return image.Point{
 		X: int(math.Round(float64(src.X-ref.X)*cos-float64(src.Y-ref.Y)*sin)) + ref.X,
 		Y: int(math.Round(float64(src.X-ref.X)*sin+float64(src.Y-ref.Y)*cos)) + ref.Y,

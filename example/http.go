@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/lyp256/captcha"
-	"github.com/lyp256/captcha/cache"
+	cache2 "github.com/lyp256/captcha/pkg/kv"
 )
 
 func newServer() (*captchaServer, error) {
@@ -21,7 +21,7 @@ func newServer() (*captchaServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := cache.NewCURD(time.Minute)
+	c := cache2.NewCURD(time.Minute)
 
 	return &captchaServer{
 		c: captcha.NewCaptcha(provider, c),
@@ -50,10 +50,10 @@ type captchaServer struct {
 }
 
 // Captcha 生成一个验证码请求
-func (s captchaServer) Captcha(writer http.ResponseWriter, _ *http.Request) {
+func (s captchaServer) Captcha(writer http.ResponseWriter, request *http.Request) {
 	en := json.NewEncoder(writer)
 	key := strconv.FormatInt(time.Now().UnixNano(), 36)
-	err := s.c.Generate(key)
+	err := s.c.Generate(request.Context(), key)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		_ = en.Encode(responseError{
@@ -70,10 +70,10 @@ func (s captchaServer) Captcha(writer http.ResponseWriter, _ *http.Request) {
 // Image 验证码图片
 func (s captchaServer) Image(writer http.ResponseWriter, request *http.Request) {
 	key := request.URL.Query().Get("key")
-	img, err := s.c.DrawCaptcha(key)
+	img, err := s.c.DrawCaptcha(request.Context(), key)
 	if err != nil {
 
-		if errors.Is(err, cache.ErrNotExist) {
+		if errors.Is(err, cache2.ErrNotExist) {
 			writer.WriteHeader(http.StatusNotFound)
 		} else {
 			writer.WriteHeader(http.StatusInternalServerError)
@@ -89,8 +89,8 @@ func (s captchaServer) Image(writer http.ResponseWriter, request *http.Request) 
 }
 
 //  验证码图片
-func (s captchaServer) test(writer http.ResponseWriter, _ *http.Request) {
-	img, err := s.c.Draw("img/logo2.png", randRadian())
+func (s captchaServer) test(writer http.ResponseWriter, request *http.Request) {
+	img, err := s.c.Draw(request.Context(), "img/logo.png", randRadian())
 	if err != nil {
 		log.Println(err)
 		return
@@ -112,9 +112,9 @@ func (s captchaServer) Validate(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	diff, err := s.c.Compare(key, radian)
+	diff, err := s.c.Compare(request.Context(), key, radian)
 	if err != nil {
-		if errors.Is(err, cache.ErrNotExist) {
+		if errors.Is(err, cache2.ErrNotExist) {
 			writer.WriteHeader(http.StatusNotFound)
 		} else {
 			writer.WriteHeader(http.StatusInternalServerError)
